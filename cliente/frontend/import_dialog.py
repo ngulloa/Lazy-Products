@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QSpacerItem,
@@ -58,14 +59,14 @@ class ImportProductPage(QWidget):
     def _build_ui(self) -> None:
         """Construye la interfaz de la pagina."""
         root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(24, 24, 24, 24)
+        root_layout.setContentsMargins(20, 20, 20, 20)
         root_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         card = QFrame(self)
         card.setObjectName("importCard")
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(24, 24, 24, 24)
-        card_layout.setSpacing(18)
+        card_layout.setContentsMargins(20, 20, 20, 20)
+        card_layout.setSpacing(14)
 
         title_label = QLabel("Crear archivo de importación", card)
         title_label.setObjectName("dialogTitle")
@@ -77,21 +78,21 @@ class ImportProductPage(QWidget):
 
         form_columns_layout = QHBoxLayout()
         form_columns_layout.setContentsMargins(0, 0, 0, 0)
-        form_columns_layout.setSpacing(18)
+        form_columns_layout.setSpacing(14)
 
         left_column_widget = QWidget(card)
         left_form_layout = QGridLayout(left_column_widget)
         left_form_layout.setContentsMargins(0, 0, 0, 0)
-        left_form_layout.setHorizontalSpacing(20)
-        left_form_layout.setVerticalSpacing(12)
+        left_form_layout.setHorizontalSpacing(16)
+        left_form_layout.setVerticalSpacing(10)
         left_form_layout.setColumnMinimumWidth(0, 0)
         left_form_layout.setColumnStretch(1, 1)
 
         right_column_widget = QWidget(card)
         right_form_layout = QGridLayout(right_column_widget)
         right_form_layout.setContentsMargins(0, 0, 0, 0)
-        right_form_layout.setHorizontalSpacing(14)
-        right_form_layout.setVerticalSpacing(12)
+        right_form_layout.setHorizontalSpacing(12)
+        right_form_layout.setVerticalSpacing(10)
         right_form_layout.setColumnMinimumWidth(0, 145)
         right_form_layout.setColumnStretch(1, 1)
 
@@ -138,7 +139,7 @@ class ImportProductPage(QWidget):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed,
         )
-        self._descripcion_web_input.setFixedHeight(90)
+        self._descripcion_web_input.setFixedHeight(80)
 
         self._descripcion_seo_input = QTextEdit(card)
         self._descripcion_seo_input.setPlaceholderText(
@@ -148,7 +149,7 @@ class ImportProductPage(QWidget):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed,
         )
-        self._descripcion_seo_input.setFixedHeight(90)
+        self._descripcion_seo_input.setFixedHeight(80)
 
         self._marca_input = QLineEdit(card)
         self._marca_input.setSizePolicy(
@@ -243,6 +244,13 @@ class ImportProductPage(QWidget):
         self._peso_completo_input.setSingleStep(0.5)
         self._peso_completo_input.setButtonSymbols(
             QAbstractSpinBox.ButtonSymbols.NoButtons
+        )
+
+        self._material_input = QLineEdit(card)
+        self._material_input.setPlaceholderText("Ej: Aluminio, Pl\u00e1stico, Acero...")
+        self._material_input.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
         )
 
         self._dimensiones_producto_input = QLineEdit(card)
@@ -351,6 +359,13 @@ class ImportProductPage(QWidget):
         row_right = self._add_form_row(
             right_form_layout,
             row_right,
+            "Material",
+            self._material_input,
+            label_min_width=145,
+        )
+        row_right = self._add_form_row(
+            right_form_layout,
+            row_right,
             "Alto Envio",
             self._alto_envio_input,
             label_min_width=145,
@@ -428,8 +443,20 @@ class ImportProductPage(QWidget):
         form_columns_layout.setStretch(0, 1)
         form_columns_layout.setStretch(2, 1)
 
+        form_columns_widget = QWidget(card)
+        form_columns_widget.setObjectName("formColumnsWidget")
+        form_columns_widget.setLayout(form_columns_layout)
+
+        form_scroll = QScrollArea(card)
+        form_scroll.setObjectName("formColumnsScroll")
+        form_scroll.setWidgetResizable(True)
+        form_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        form_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        form_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        form_scroll.setWidget(form_columns_widget)
+
         buttons_layout = QHBoxLayout()
-        buttons_layout.setSpacing(10)
+        buttons_layout.setSpacing(8)
 
         self._next_button = QPushButton("Añadir Producto", card)
         self._save_button = QPushButton("Guardar", card)
@@ -449,8 +476,8 @@ class ImportProductPage(QWidget):
 
         card_layout.addWidget(title_label)
         card_layout.addWidget(title_separator)
-        card_layout.addLayout(form_columns_layout)
-        card_layout.addSpacing(8)
+        card_layout.addWidget(form_scroll, 1)
+        card_layout.addSpacing(6)
         card_layout.addLayout(buttons_layout)
 
         shadow = QGraphicsDropShadowEffect(card)
@@ -470,31 +497,45 @@ class ImportProductPage(QWidget):
         self.setStyleSheet(
             """
             QWidget#importPage {
-                background-color: #eef1f4;
+                background-color: #f5f6f8;
             }
             QFrame#importCard {
                 background-color: #ffffff;
+                border: 1px solid #d0d7de;
                 border-radius: 18px;
             }
+            QScrollArea#formColumnsScroll {
+                background: transparent;
+                border: none;
+            }
+            QScrollArea#formColumnsScroll > QWidget#qt_scrollarea_viewport {
+                background-color: #ffffff;
+            }
+            QScrollArea#formColumnsScroll > QWidget > QWidget {
+                background-color: #ffffff;
+            }
+            QWidget#formColumnsWidget {
+                background-color: #ffffff;
+            }
             QLabel#dialogTitle {
-                color: #20232a;
+                color: #1f2937;
                 font-family: "Segoe UI";
-                font-size: 18px;
+                font-size: 17px;
                 font-weight: 700;
             }
             QFrame#titleSeparator,
             QFrame#columnSeparator {
-                background-color: #dbe2ea;
+                background-color: #d0d7de;
             }
             QLabel#formLabel {
-                color: #334155;
+                color: #1f2937;
                 font-family: "Segoe UI";
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 600;
             }
             QFrame#idBadge {
-                background-color: #f8fafc;
-                border: 1px solid #d1d5db;
+                background-color: #ffffff;
+                border: 1px solid #d0d7de;
                 border-radius: 10px;
                 min-height: 42px;
             }
@@ -505,13 +546,16 @@ class ImportProductPage(QWidget):
                 font-weight: 700;
             }
             QLineEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
-                background-color: #f8fafc;
-                border: 1px solid #d1d5db;
+                background-color: #ffffff;
+                border: 1px solid #d0d7de;
                 border-radius: 8px;
-                color: #111827;
+                color: #1f2937;
                 font-family: "Segoe UI";
-                font-size: 14px;
-                padding: 10px;
+                font-size: 13px;
+                padding: 8px;
+            }
+            QLineEdit::placeholder, QTextEdit::placeholder {
+                color: #6b7280;
             }
             QLineEdit:focus, QTextEdit:focus, QSpinBox:focus,
             QDoubleSpinBox:focus, QComboBox:focus {
@@ -544,9 +588,9 @@ class ImportProductPage(QWidget):
                 border-radius: 10px;
                 color: #ffffff;
                 font-family: "Segoe UI";
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 600;
-                min-height: 36px;
+                min-height: 34px;
                 padding: 6px 10px;
             }
             QPushButton:hover {
@@ -591,6 +635,7 @@ class ImportProductPage(QWidget):
         self._largo_envio_input.valueChanged.connect(self._update_form_state)
         self._ancho_envio_input.valueChanged.connect(self._update_form_state)
         self._peso_completo_input.valueChanged.connect(self._update_form_state)
+        self._material_input.textChanged.connect(self._update_form_state)
         self._dimensiones_producto_input.textChanged.connect(self._update_form_state)
         self._unidad_medida_input.currentIndexChanged.connect(self._update_form_state)
         self._venta_sin_iva_input.valueChanged.connect(self._update_form_state)
@@ -674,6 +719,7 @@ class ImportProductPage(QWidget):
             self._largo_envio_input,
             self._ancho_envio_input,
             self._peso_completo_input,
+            self._material_input,
             self._dimensiones_producto_input,
             self._unidad_medida_input,
             self._venta_sin_iva_input,
@@ -806,6 +852,7 @@ class ImportProductPage(QWidget):
             alto_envio=float(self._alto_envio_input.value()),
             peso_completo=float(self._peso_completo_input.value()),
             dimensiones_producto=self._dimensiones_producto_input.text().strip(),
+            material=self._material_input.text().strip(),
             unidad_medida_dimensiones=self._unidad_medida_input.currentText().strip(),
             numero_variantes=self._numero_variantes_input.value(),
             esta_publicado=self._esta_publicado_input.isChecked(),
@@ -831,6 +878,7 @@ class ImportProductPage(QWidget):
         self._largo_envio_input.setValue(0.0)
         self._ancho_envio_input.setValue(0.0)
         self._peso_completo_input.setValue(0.0)
+        self._material_input.clear()
         self._dimensiones_producto_input.clear()
         self._unidad_medida_input.setCurrentIndex(0)
         self._venta_sin_iva_input.setValue(0.0)
@@ -853,6 +901,7 @@ class ImportProductPage(QWidget):
             data.modelo,
             data.valores_atributo,
             data.dimensiones_producto,
+            data.material,
         )
         if any(field.strip() for field in text_fields):
             return True
