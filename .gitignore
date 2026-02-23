@@ -1,0 +1,14 @@
+﻿__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Generated output
+data/output/*.csv
+data/utilities/info_products/_backup_*/
+data/utilities/info_products/_migration_reports/
+
+
+

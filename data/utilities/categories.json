@@ -1,0 +1,75 @@
+{
+  "next_code": 14,
+  "categories": [
+    {
+      "slug": "punos",
+      "display_name": "Puños",
+      "code": 0
+    },
+    {
+      "slug": "sillin",
+      "display_name": "Sillín",
+      "code": 1
+    },
+    {
+      "slug": "luces",
+      "display_name": "Luces",
+      "code": 2
+    },
+    {
+      "slug": "camaras",
+      "display_name": "Cámaras",
+      "code": 3
+    },
+    {
+      "slug": "neumatico",
+      "display_name": "Neumático",
+      "code": 4
+    },
+    {
+      "slug": "pedales",
+      "display_name": "Pedales",
+      "code": 5
+    },
+    {
+      "slug": "caramagiola",
+      "display_name": "Caramagiola",
+      "code": 6
+    },
+    {
+      "slug": "porta-caramagiola",
+      "display_name": "Porta-caramagiola",
+      "code": 7
+    },
+    {
+      "slug": "cascos",
+      "display_name": "Cascos",
+      "code": 8
+    },
+    {
+      "slug": "cadenas",
+      "display_name": "Cadenas",
+      "code": 9
+    },
+    {
+      "slug": "manillas-de-freno",
+      "display_name": "Manillas de freno",
+      "code": 10
+    },
+    {
+      "slug": "manillas-de-cambio",
+      "display_name": "Manillas de cambio",
+      "code": 11
+    },
+    {
+      "slug": "tricota",
+      "display_name": "Tricota",
+      "code": 12
+    },
+    {
+      "slug": "pastillas-de-freno",
+      "display_name": "Pastillas De Freno",
+      "code": 13
+    }
+  ]
+}
