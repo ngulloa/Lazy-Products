@@ -36,6 +36,7 @@ class ImportBuilderService:
     TEMPLATE_HEADERS = ("sku", "nombre", "cantidad")
     IMPORT_HEADERS = CANONICAL_IMPORT_HEADERS
     CATEGORY_INVENTORY_HEADERS = CANONICAL_INFO_PRODUCTS_HEADERS
+    TAGS_HEADER = "Etiquetas"
     IVA_RATE = 0.19
 
     def __init__(
@@ -108,17 +109,23 @@ class ImportBuilderService:
             raise ServiceError(f"No existe archivo de sesion para importar: {file_path}")
 
         LOGGER.debug("Agregando fila a sesion de importacion en progreso: %s", file_path)
-        self._ensure_session_file(file_path)
+        session_headers = self._ensure_session_file(file_path)
         mapping = self._get_category_mapping()
 
-        session_row = self._build_inventory_row(
+        inventory_row = self._build_inventory_row(
             product=product,
             mapping=mapping,
             next_row_id=self._next_row_id(file_path),
         )
+        row_by_header = {
+            header: inventory_row[index]
+            for index, header in enumerate(self.IMPORT_HEADERS)
+        }
+        session_row = [row_by_header.get(header, "") for header in session_headers]
+
         category_path = self._category_inventory_path(product.producto_slug)
-        self._ensure_inventory_file(category_path)
-        category_row = session_row[1:]
+        category_headers = self._ensure_inventory_file(category_path)
+        category_row = [row_by_header.get(header, "") for header in category_headers]
 
         self._append_rows_with_rollback(
             session_path=file_path,
@@ -130,7 +137,7 @@ class ImportBuilderService:
         LOGGER.info(
             "Fila agregada en sesion de importacion: path=%s, row_id=%s",
             file_path,
-            session_row[0],
+            row_by_header.get(self.IMPORT_HEADERS[0], ""),
         )
         LOGGER.debug("Fila agregada en inventario por categoria: path=%s", category_path)
 
@@ -279,6 +286,7 @@ class ImportBuilderService:
         descripcion_seo = self._clean_multiline(product.descripcion_seo)
         dimensiones_producto = self._clean_single_line(product.dimensiones_producto)
         unidad_dimensiones = self._clean_single_line(product.unidad_medida_dimensiones)
+        etiquetas = self._clean_single_line(product.etiquetas or "")
 
         digito_verificador = ean13_check_digit(base_ean13)
         codigo_barras = build_barcode(base_ean13)
@@ -333,7 +341,7 @@ class ImportBuilderService:
             categoria_producto,
             "1" if product.esta_publicado else "0",
             "1" if product.rastrear_inventario else "0",
-            "",
+            etiquetas,
             "Clubike",
             "TRUE" if product.disponible_punto_venta else "FALSE",
         ]
@@ -345,8 +353,8 @@ class ImportBuilderService:
             raise ServiceError("producto_slug es obligatorio para registrar inventario por categoria.")
         return self._category_inventory_dir / f"{slug}.csv"
 
-    def _ensure_session_file(self, path: Path) -> None:
-        """Valida que la sesion exista y mantenga header canonico de importacion."""
+    def _ensure_session_file(self, path: Path) -> list[str]:
+        """Valida sesion y retorna el header activo para escritura de filas."""
         if not path.exists() or not path.is_file():
             raise ServiceError(f"No existe archivo de sesion para importar: {path}")
 
@@ -366,13 +374,28 @@ class ImportBuilderService:
                 raise ServiceError(
                     f"No fue posible inicializar archivo de sesion: {path}"
                 ) from exc
-            return
+            return list(self.IMPORT_HEADERS)
 
-        if header != list(self.IMPORT_HEADERS):
-            raise ServiceError(f"Header invalido en archivo de sesion: {path}")
+        if header == list(self.IMPORT_HEADERS):
+            return header
 
-    def _ensure_inventory_file(self, path: Path) -> None:
-        """Asegura que el archivo exista y tenga header de inventario."""
+        legacy_without_tags = self._headers_without_tags(self.IMPORT_HEADERS)
+        if header == legacy_without_tags:
+            migrated_header = self._append_tags_column(path=path, rows=rows)
+            LOGGER.info(
+                "Sesion de importacion migrada agregando columna '%s' al final: %s",
+                self.TAGS_HEADER,
+                path,
+            )
+            return migrated_header
+
+        if header == legacy_without_tags + [self.TAGS_HEADER]:
+            return header
+
+        raise ServiceError(f"Header invalido en archivo de sesion: {path}")
+
+    def _ensure_inventory_file(self, path: Path) -> list[str]:
+        """Asegura inventario por categoria y retorna el header activo."""
         if not path.exists():
             try:
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -383,7 +406,7 @@ class ImportBuilderService:
                 raise ServiceError(
                     f"No fue posible crear inventario de categoria: {path}"
                 ) from exc
-            return
+            return list(self.CATEGORY_INVENTORY_HEADERS)
 
         try:
             with path.open("r", newline="", encoding="utf-8-sig") as csv_file:
@@ -402,10 +425,39 @@ class ImportBuilderService:
                 raise ServiceError(
                     f"No fue posible inicializar inventario de categoria: {path}"
                 ) from exc
-            return
+            return list(self.CATEGORY_INVENTORY_HEADERS)
 
         if header == list(self.CATEGORY_INVENTORY_HEADERS):
-            return
+            return header
+
+        legacy_without_tags = self._headers_without_tags(self.CATEGORY_INVENTORY_HEADERS)
+        if header == legacy_without_tags:
+            migrated_header = self._append_tags_column(path=path, rows=rows)
+            LOGGER.info(
+                "Inventario de categoria migrado agregando columna '%s' al final: %s",
+                self.TAGS_HEADER,
+                path,
+            )
+            return migrated_header
+
+        if header == legacy_without_tags + [self.TAGS_HEADER]:
+            return header
+
+        legacy_import_without_tags = self._headers_without_tags(self.IMPORT_HEADERS)
+        if header == legacy_import_without_tags:
+            migrated_rows = [
+                self._normalize_row_length(row[1:], len(legacy_without_tags)) + [""]
+                for row in rows[1:]
+                if len(row) > 1 and self._row_has_content(row[1:])
+            ]
+            migrated_header = [*legacy_without_tags, self.TAGS_HEADER]
+            self._rewrite_csv(path, migrated_header, migrated_rows)
+            LOGGER.info(
+                "Inventario de categoria migrado removiendo ID y agregando columna '%s': %s",
+                self.TAGS_HEADER,
+                path,
+            )
+            return migrated_header
 
         if header == list(self.IMPORT_HEADERS):
             migrated_rows = [
@@ -415,25 +467,61 @@ class ImportBuilderService:
             ]
             self._write_inventory_file(path, migrated_rows)
             LOGGER.info("Inventario de categoria migrado removiendo columna ID: %s", path)
-            return
+            return list(self.CATEGORY_INVENTORY_HEADERS)
 
         raise ServiceError(f"Header invalido en inventario de categoria: {path}")
 
     @classmethod
     def _write_inventory_file(cls, path: Path, rows: list[list[str]]) -> None:
         """Escribe inventario por categoria con header canonico sin columna ID."""
+        cls._rewrite_csv(path, list(cls.CATEGORY_INVENTORY_HEADERS), rows)
+
+    @classmethod
+    def _append_tags_column(cls, path: Path, rows: list[list[str]]) -> list[str]:
+        """Agrega columna Etiquetas al final y rellena filas existentes con vacio."""
+        header = [column.strip() for column in (rows[0] if rows else [])]
+        if cls.TAGS_HEADER in header:
+            return header
+
+        expected_columns = len(header)
+        migrated_rows = []
+        for row in rows[1:]:
+            normalized_row = cls._normalize_row_length(row, expected_columns)
+            normalized_row.append("")
+            migrated_rows.append(normalized_row)
+
+        migrated_header = [*header, cls.TAGS_HEADER]
+        cls._rewrite_csv(path, migrated_header, migrated_rows)
+        return migrated_header
+
+    @classmethod
+    def _rewrite_csv(cls, path: Path, header: list[str], rows: list[list[str]]) -> None:
+        """Reescribe un CSV completo con header y filas normalizadas."""
         temp_path = path.with_name(f"{path.name}.tmp")
         try:
             with temp_path.open("w", newline="", encoding="utf-8") as csv_file:
                 writer = csv.writer(csv_file)
-                writer.writerow(cls.CATEGORY_INVENTORY_HEADERS)
+                writer.writerow(header)
                 writer.writerows(rows)
             temp_path.replace(path)
         except OSError as exc:
-            raise ServiceError(f"No fue posible escribir inventario de categoria: {path}") from exc
+            raise ServiceError(f"No fue posible escribir archivo CSV: {path}") from exc
         finally:
             if temp_path.exists():
                 temp_path.unlink(missing_ok=True)
+
+    @classmethod
+    def _headers_without_tags(cls, headers: tuple[str, ...]) -> list[str]:
+        """Retorna una copia de headers sin la columna Etiquetas."""
+        return [column for column in headers if column != cls.TAGS_HEADER]
+
+    @staticmethod
+    def _normalize_row_length(row: list[str], expected_columns: int) -> list[str]:
+        """Normaliza largo de fila para que coincida con un header dado."""
+        normalized_row = list(row[:expected_columns])
+        if len(normalized_row) < expected_columns:
+            normalized_row.extend([""] * (expected_columns - len(normalized_row)))
+        return normalized_row
 
     @staticmethod
     def _row_has_content(row: list[str]) -> bool:

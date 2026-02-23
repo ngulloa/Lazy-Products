@@ -47,6 +47,7 @@ class ImportProductDraft:
     rastrear_inventario: bool
     disponible_punto_venta: bool
     producto_slug: str = ""
+    etiquetas: str = ""
 
 
 @dataclass(slots=True)

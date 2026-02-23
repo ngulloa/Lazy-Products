@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -175,11 +176,12 @@ class AppController:
         """Valida y agrega una fila de producto al CSV en progreso."""
         self._validate_required_fields(data)
         file_path = self.start_import_session_if_needed()
+        draft = replace(data, etiquetas=(data.etiquetas or ""))
 
         response = self._gateway.append_import_row(
-            AppendImportRowRequest(file_path=file_path, product=data)
+            AppendImportRowRequest(file_path=file_path, product=draft)
         )
-        self._update_duplicate_index_after_append(data)
+        self._update_duplicate_index_after_append(draft)
         LOGGER.info("Se agrego una fila al CSV de importacion: %s", response.file_path)
 
     def on_import_save(self) -> str:

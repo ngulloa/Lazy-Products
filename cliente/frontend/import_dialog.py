@@ -29,8 +29,10 @@ from PyQt6.QtWidgets import (
 
 from cliente.frontend.details_dialog import ProductDetailsDialog
 from cliente.frontend.dialogs import show_error, show_info
+from cliente.frontend.widgets.checkable_combo import CheckableComboBox
 from shared.errors import ServiceError, ValidationError
 from shared.protocol import ImportProductDraft
+from shared.tags import AVAILABLE_TAGS, normalize_selected_tags
 
 if TYPE_CHECKING:
     from cliente.backend.controller import AppController
@@ -195,6 +197,13 @@ class ImportProductPage(QWidget):
             QAbstractSpinBox.ButtonSymbols.NoButtons
         )
 
+        self._etiquetas_input = CheckableComboBox(card)
+        self._etiquetas_input.set_items(list(AVAILABLE_TAGS))
+        self._etiquetas_input.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+
         self._esta_publicado_input = QCheckBox(card)
         self._esta_publicado_input.setChecked(True)
 
@@ -311,6 +320,12 @@ class ImportProductPage(QWidget):
             row_left,
             "Numero de variantes",
             self._numero_variantes_input,
+        )
+        row_left = self._add_form_row(
+            left_form_layout,
+            row_left,
+            "Etiquetas",
+            self._etiquetas_input,
         )
         row_left = self._add_form_row(
             left_form_layout,
@@ -581,6 +596,7 @@ class ImportProductPage(QWidget):
         self._venta_sin_iva_input.valueChanged.connect(self._update_form_state)
         self._descripcion_web_input.textChanged.connect(self._update_form_state)
         self._descripcion_seo_input.textChanged.connect(self._update_form_state)
+        self._etiquetas_input.checked_items_changed.connect(self._update_form_state)
 
     def _is_required_data_complete(self, data: ImportProductDraft) -> bool:
         """Valida campos obligatorios para habilitar acciones de formulario."""
@@ -650,6 +666,7 @@ class ImportProductPage(QWidget):
             self._atributo_input,
             self._precio_costo_input,
             self._numero_variantes_input,
+            self._etiquetas_input,
             self._esta_publicado_input,
             self._rastrear_inventario_input,
             self._disponible_pdv_input,
@@ -795,6 +812,7 @@ class ImportProductPage(QWidget):
             rastrear_inventario=self._rastrear_inventario_input.isChecked(),
             disponible_punto_venta=self._disponible_pdv_input.isChecked(),
             producto_slug=selected_slug,
+            etiquetas=self._selected_tags_csv(),
         )
 
     def _reset_form(self) -> None:
@@ -816,6 +834,7 @@ class ImportProductPage(QWidget):
         self._dimensiones_producto_input.clear()
         self._unidad_medida_input.setCurrentIndex(0)
         self._venta_sin_iva_input.setValue(0.0)
+        self._etiquetas_input.set_checked_items([])
 
         self._esta_publicado_input.setChecked(True)
         self._rastrear_inventario_input.setChecked(True)
@@ -846,6 +865,8 @@ class ImportProductPage(QWidget):
             return True
         if data.numero_variantes != 1:
             return True
+        if data.etiquetas.strip():
+            return True
         if data.alto_envio != 0.0:
             return True
         if data.largo_envio != 0.0:
@@ -859,6 +880,10 @@ class ImportProductPage(QWidget):
             return True
 
         return False
+
+    def _selected_tags_csv(self) -> str:
+        """Retorna etiquetas seleccionadas en formato CSV normalizado."""
+        return normalize_selected_tags(self._etiquetas_input.checked_items())
 
     def _add_form_row(
         self,

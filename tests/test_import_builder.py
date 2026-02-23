@@ -149,6 +149,37 @@ class ImportBuilderServiceTests(unittest.TestCase):
             self.assertEqual(session_row[37], "TRUE")
             self.assertEqual(category_row[36], "TRUE")
 
+    def test_append_product_persists_tags_with_comma_as_single_field(self) -> None:
+        """Debe persistir Etiquetas como un campo CSV unico aunque contenga coma."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base_path = Path(temp_dir)
+            output_dir = base_path / "output"
+            category_inventory_dir = base_path / "info_products"
+            categories_path = self._create_categories_csv(base_path)
+            service = ImportBuilderService(
+                categories_csv_path=categories_path,
+                category_inventory_dir=category_inventory_dir,
+            )
+            file_path = service.start_import_session(
+                output_dir=output_dir,
+                filename_stem="inventario",
+            )
+
+            service.append_product(
+                file_path,
+                self._build_draft(etiquetas="MTB, Ruta"),
+            )
+
+            category_path = category_inventory_dir / "punos.csv"
+
+            with file_path.open("r", newline="", encoding="utf-8") as csv_file:
+                session_rows = list(csv.DictReader(csv_file))
+            with category_path.open("r", newline="", encoding="utf-8") as csv_file:
+                category_rows = list(csv.DictReader(csv_file))
+
+            self.assertEqual(session_rows[0]["Etiquetas"], "MTB, Ruta")
+            self.assertEqual(category_rows[0]["Etiquetas"], "MTB, Ruta")
+
     def test_append_product_adds_exactly_one_row_to_both_files(self) -> None:
         """Debe agregar exactamente una fila en sesion y categoria por cada append."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -374,6 +405,7 @@ class ImportBuilderServiceTests(unittest.TestCase):
         referencia_interna: str = "PUN-BIK-ERG-N",
         producto: str = "PuÃ±os",
         producto_slug: str = "punos",
+        etiquetas: str = "",
     ) -> ImportProductDraft:
         return ImportProductDraft(
             id_externo=id_externo,
@@ -399,6 +431,7 @@ class ImportBuilderServiceTests(unittest.TestCase):
             rastrear_inventario=True,
             disponible_punto_venta=True,
             producto_slug=producto_slug,
+            etiquetas=etiquetas,
         )
 
 

@@ -1,0 +1,2 @@
+"""Widgets reutilizables del frontend."""
+
