@@ -287,6 +287,7 @@ class ImportBuilderService:
         dimensiones_producto = self._clean_single_line(product.dimensiones_producto)
         unidad_dimensiones = self._clean_single_line(product.unidad_medida_dimensiones)
         etiquetas = self._clean_single_line(product.etiquetas or "")
+        material = self._clean_single_line(product.material or "")
 
         digito_verificador = ean13_check_digit(base_ean13)
         codigo_barras = build_barcode(base_ean13)
@@ -324,7 +325,7 @@ class ImportBuilderService:
             self._format_number(product.alto_envio),
             self._format_number(product.peso_completo),
             dimensiones_producto,
-            "",
+            material,
             "",
             format_clp(product.precio_costo),
             str(product.numero_variantes),

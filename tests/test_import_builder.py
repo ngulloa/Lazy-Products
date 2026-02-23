@@ -149,6 +149,38 @@ class ImportBuilderServiceTests(unittest.TestCase):
             self.assertEqual(session_row[37], "TRUE")
             self.assertEqual(category_row[36], "TRUE")
 
+    def test_append_product_writes_material_column(self) -> None:
+        """Debe escribir Material en sesion y en inventario por categoria."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base_path = Path(temp_dir)
+            output_dir = base_path / "output"
+            category_inventory_dir = base_path / "info_products"
+            categories_path = self._create_categories_csv(base_path)
+
+            service = ImportBuilderService(
+                categories_csv_path=categories_path,
+                category_inventory_dir=category_inventory_dir,
+            )
+            file_path = service.start_import_session(
+                output_dir=output_dir,
+                filename_stem="inventario",
+            )
+
+            service.append_product(file_path, self._build_draft(material="Aluminio"))
+
+            category_path = category_inventory_dir / "punos.csv"
+
+            with file_path.open("r", newline="", encoding="utf-8") as csv_file:
+                session_rows = list(csv.reader(csv_file))
+            with category_path.open("r", newline="", encoding="utf-8") as csv_file:
+                category_rows = list(csv.reader(csv_file))
+
+            session_material_index = self.EXPECTED_IMPORT_HEADERS.index("Material")
+            category_material_index = self.EXPECTED_CATEGORY_HEADERS.index("Material")
+
+            self.assertEqual(session_rows[-1][session_material_index], "Aluminio")
+            self.assertEqual(category_rows[-1][category_material_index], "Aluminio")
+
     def test_append_product_persists_tags_with_comma_as_single_field(self) -> None:
         """Debe persistir Etiquetas como un campo CSV unico aunque contenga coma."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -406,6 +438,7 @@ class ImportBuilderServiceTests(unittest.TestCase):
         producto: str = "PuÃ±os",
         producto_slug: str = "punos",
         etiquetas: str = "",
+        material: str = "",
     ) -> ImportProductDraft:
         return ImportProductDraft(
             id_externo=id_externo,
@@ -432,6 +465,7 @@ class ImportBuilderServiceTests(unittest.TestCase):
             disponible_punto_venta=True,
             producto_slug=producto_slug,
             etiquetas=etiquetas,
+            material=material,
         )
 
 

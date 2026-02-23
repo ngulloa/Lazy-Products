@@ -48,6 +48,7 @@ class ImportProductDraft:
     disponible_punto_venta: bool
     producto_slug: str = ""
     etiquetas: str = ""
+    material: str = ""
 
 
 @dataclass(slots=True)
