@@ -21,6 +21,7 @@ from shared.protocol import (
 
 from .gateway import ServerGateway
 from .id_registry import IdRegistry
+from .product_details_formatter import format_product_details_clipboard_text
 from .product_names import (
     build_internal_reference as build_product_internal_reference,
     slug_to_display_name,
@@ -153,6 +154,19 @@ class AppController:
             valores_atributo=data.valores_atributo,
             dimensiones_producto=data.dimensiones_producto,
             unidad=data.unidad_medida_dimensiones,
+        )
+
+    def build_product_details_clipboard_text(
+        self,
+        data: ImportProductDraft,
+        nombre_comercial: str,
+        observaciones_raw: str,
+    ) -> str:
+        """Construye el texto de portapapeles del dialogo de detalles."""
+        return format_product_details_clipboard_text(
+            data,
+            nombre_comercial,
+            observaciones_raw,
         )
 
     def start_import_session_if_needed(self) -> str:

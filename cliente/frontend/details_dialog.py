@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QApplication,
@@ -15,12 +17,24 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+if TYPE_CHECKING:
+    from cliente.backend.controller import AppController
+    from shared.protocol import ImportProductDraft
+
 
 class ProductDetailsDialog(QDialog):
     """Dialogo para mostrar nombre comercial y observaciones."""
 
-    def __init__(self, nombre_comercial: str, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        controller: AppController,
+        draft: ImportProductDraft,
+        nombre_comercial: str,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
+        self._controller = controller
+        self._draft = draft
         self._nombre_comercial = nombre_comercial.strip()
 
         self.setWindowTitle("Detalles del producto")
@@ -135,6 +149,10 @@ class ProductDetailsDialog(QDialog):
 
     def _copy_to_clipboard(self) -> None:
         """Copia nombre comercial y observaciones al portapapeles."""
-        observaciones = self._observaciones_input.toPlainText().strip()
-        text = f"{self._nombre_comercial}\n{observaciones}"
+        observaciones_raw = self._observaciones_input.toPlainText()
+        text = self._controller.build_product_details_clipboard_text(
+            self._draft,
+            self._nombre_comercial,
+            observaciones_raw,
+        )
         QApplication.clipboard().setText(text)

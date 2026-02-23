@@ -795,7 +795,12 @@ class ImportProductPage(QWidget):
         except (ValidationError, ServiceError):
             nombre_comercial = ""
 
-        dialog = ProductDetailsDialog(nombre_comercial=nombre_comercial, parent=self)
+        dialog = ProductDetailsDialog(
+            controller=self._controller,
+            draft=data,
+            nombre_comercial=nombre_comercial,
+            parent=self,
+        )
         dialog.exec()
 
     def _on_back_clicked(self) -> None:
